@@ -17,6 +17,9 @@ class ResumeQueryApp {
         this.searchBtn = document.getElementById('search-btn');
         this.resultLimit = document.getElementById('result-limit');
         this.modeButtons = document.querySelectorAll('.mode-btn');
+        this.rerankToggle = document.getElementById('enable-rerank');
+        this.rerankModelSelector = document.getElementById('rerank-model');
+        this.rerankContainer = document.querySelector('.rerank-toggle');
         
         // Results elements
         this.resultsHeader = document.getElementById('results-header');
@@ -72,6 +75,9 @@ class ResumeQueryApp {
                     this.disableMode('hybrid');
                     this.disableMode('bm25');
                 }
+                if (!data.reranking_available) {
+                    this.disableReranking();
+                }
             } else {
                 this.updateStatus('error', 'System not ready');
             }
@@ -102,6 +108,15 @@ class ResumeQueryApp {
         }
     }
     
+    disableReranking() {
+        if (this.rerankContainer) {
+            this.rerankContainer.classList.add('disabled');
+            this.rerankToggle.disabled = true;
+            this.rerankToggle.checked = false;
+            this.rerankModelSelector.disabled = true;
+        }
+    }
+    
     async performSearch() {
         const query = this.searchInput.value.trim();
         if (!query || this.isSearching) return;
@@ -119,7 +134,9 @@ class ResumeQueryApp {
                 body: JSON.stringify({
                     query: query,
                     mode: this.currentMode,
-                    limit: parseInt(this.resultLimit.value)
+                    limit: parseInt(this.resultLimit.value),
+                    rerank: this.rerankToggle.checked,
+                    rerank_model: this.rerankModelSelector.value
                 })
             });
             
@@ -159,6 +176,11 @@ class ResumeQueryApp {
         let infoText = `Found ${data.total} results using ${data.search_info.mode} search`;
         if (data.search_info.semantic_count !== undefined) {
             infoText += ` (${data.search_info.semantic_count} semantic, ${data.search_info.bm25_count} keyword)`;
+        }
+        if (data.search_info.reranked) {
+            const modelName = data.search_info.rerank_metadata?.model || 'Voyage AI';
+            const modelIcon = modelName === 'rerank-lite-1' ? '⚡' : '🎯';
+            infoText += ` • ${modelIcon} Reranked with ${modelName}`;
         }
         this.resultsInfo.textContent = infoText;
         
@@ -209,7 +231,12 @@ class ResumeQueryApp {
                     <div class="result-type ${typeClass}">${typeLabel}</div>
                     <div class="result-title">${this.escapeHtml(title)}</div>
                     <div class="result-subtitle">${this.escapeHtml(subtitle)}</div>
-                    <div class="result-score">Similarity: ${result.similarity.toFixed(4)}</div>
+                    <div class="result-score">
+                        ${result.rerank_score ? 
+                            `Rerank: ${result.rerank_score.toFixed(4)} • Similarity: ${result.similarity.toFixed(4)}` :
+                            `Similarity: ${result.similarity.toFixed(4)}`
+                        }
+                    </div>
                 </div>
                 <div class="result-content">
                     ${this.escapeHtml(content).replace(/\\n/g, '<br>')}

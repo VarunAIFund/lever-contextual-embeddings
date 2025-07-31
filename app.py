@@ -10,6 +10,7 @@ import json
 from resume_query.database import ResumeVectorDB
 from resume_query.search import create_resume_bm25_index, retrieve_hybrid_resume
 from resume_query.config import DEFAULT_RESUME_FILE, get_db_name_from_file
+from resume_query.reranking import create_reranker
 
 app = Flask(__name__)
 
@@ -18,10 +19,11 @@ resume_db = None
 es_bm25 = None
 db_initialized = False
 candidates_data = None  # Store original JSON data for links access
+reranker = None  # Voyage AI reranker instance
 
 def initialize_database():
     """Initialize the resume database and search indices."""
-    global resume_db, es_bm25, db_initialized, candidates_data
+    global resume_db, es_bm25, db_initialized, candidates_data, reranker
     
     if db_initialized:
         return True
@@ -55,6 +57,18 @@ def initialize_database():
             print(f"⚠️ Hybrid search unavailable (Elasticsearch not running): {e}")
             es_bm25 = None
         
+        # Try to initialize reranker
+        try:
+            print("🔧 Initializing Voyage AI reranker...")
+            reranker = create_reranker()
+            if reranker:
+                print("✅ Reranking ready!")
+            else:
+                print("⚠️ Reranker initialization failed")
+        except Exception as e:
+            print(f"⚠️ Reranking unavailable: {e}")
+            reranker = None
+        
         db_initialized = True
         return True
         
@@ -78,6 +92,7 @@ def health():
         'database_loaded': resume_db is not None,
         'total_chunks': len(resume_db.metadata) if resume_db else 0,
         'hybrid_search_available': es_bm25 is not None,
+        'reranking_available': reranker is not None,
         'resume_file': DEFAULT_RESUME_FILE
     })
 
@@ -93,6 +108,8 @@ def search():
         query = data.get('query', '').strip()
         search_mode = data.get('mode', 'semantic')  # semantic, bm25, hybrid
         k = min(int(data.get('limit', 10)), 20)  # Max 20 results
+        use_reranking = data.get('rerank', False)  # Whether to apply reranking
+        rerank_model = data.get('rerank_model', 'rerank-lite-1')  # Which rerank model to use
         
         if not query:
             return jsonify({'error': 'Query is required'}), 400
@@ -125,11 +142,44 @@ def search():
             results = resume_db.search(query, k=k)
             search_info = {'mode': 'semantic'}
         
+        # Apply reranking if requested and available
+        if use_reranking and results:
+            try:
+                print(f"🔄 Reranking {len(results)} results with {rerank_model}...")
+                
+                # Create reranker with specified model or use existing one
+                current_reranker = reranker
+                if not current_reranker or current_reranker.model != rerank_model:
+                    from resume_query.reranking import create_reranker
+                    current_reranker = create_reranker(model=rerank_model)
+                
+                if current_reranker:
+                    reranked_results, rerank_metadata = current_reranker.rerank_search_results(
+                        query=query,
+                        search_results=results,
+                        rerank_top_n=min(50, len(results)),  # Rerank top 50 or all if less
+                        return_top_k=k
+                    )
+                    results = reranked_results
+                    search_info.update({
+                        'reranked': True,
+                        'rerank_metadata': rerank_metadata
+                    })
+                    print(f"✅ Reranking completed: {rerank_metadata.get('candidates_reranked', 0)} candidates reranked with {rerank_model}")
+                else:
+                    raise Exception(f"Could not create reranker with model {rerank_model}")
+                    
+            except Exception as e:
+                print(f"⚠️ Reranking failed: {e}, using original results")
+                search_info['rerank_error'] = str(e)
+        elif use_reranking:
+            search_info['rerank_unavailable'] = 'Reranker not available'
+        
         # Format results for JSON response
         formatted_results = []
         for result in results:
             metadata = result['metadata']
-            formatted_results.append({
+            formatted_result = {
                 'candidate_id': metadata['candidate_id'],
                 'name': metadata['name'],
                 'email': metadata['email'],
@@ -137,7 +187,14 @@ def search():
                 'similarity': result.get('similarity', result.get('score', 0)),
                 'content': result['content'],
                 'metadata': metadata  # Include full metadata for details view
-            })
+            }
+            
+            # Add rerank score if available
+            if 'rerank_score' in result:
+                formatted_result['rerank_score'] = result['rerank_score']
+                formatted_result['original_rank'] = result.get('original_rank', 0)
+            
+            formatted_results.append(formatted_result)
         
         return jsonify({
             'results': formatted_results,

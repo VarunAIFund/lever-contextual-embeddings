@@ -26,12 +26,21 @@ DEFAULT_DB_NAME = "resume_db"
 DEFAULT_BATCH_SIZE = 128
 EMBEDDING_MODEL = "voyage-2"
 
+# Voyage AI configuration
+VOYAGE_API_KEY = os.getenv("VOYAGE_API_KEY")
+
 # File paths
 DEFAULT_RESUME_FILE = "10000_candidates_with_parsed_resumes.json"
 
 # Lever API configuration
 LEVER_API_BASE_URL = "https://api.lever.co/v1"
 LEVER_API_KEY = os.getenv("LEVER_API_KEY")
+
+# Reranking configuration
+RERANK_MODEL = "rerank-lite-1"  # Options: "rerank-lite-1", "rerank-1"
+RERANK_TOP_N = 50  # Number of top results to rerank (for efficiency)
+ENABLE_RERANKING = True  # Whether to enable reranking by default
+RERANK_CACHE_ENABLED = True  # Whether to cache rerank results
 
 
 def get_db_name_from_file(resume_file: str) -> str:
