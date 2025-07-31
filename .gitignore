@@ -57,5 +57,29 @@ Thumbs.db
 *.log
 logs/
 
+# Flask
+instance/
+.webassets-cache
+
+# Enhancement script artifacts
+*.backup_*
+enhance_candidates.log
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+
+# API cache (if we add caching later)
+cache/
+*.cache
+
+# Testing
+test_output/
+*.test
+
+# Development artifacts
+debug.log
+
 # Elasticsearch data (if running locally)
 elasticsearch/

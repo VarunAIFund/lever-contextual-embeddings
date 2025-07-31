@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Query System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🔍 Resume Query System</h1>
+            <div class="status-indicator" id="status">
+                <span class="status-dot" id="status-dot"></span>
+                <span id="status-text">Initializing...</span>
+            </div>
+        </header>
+
+        <!-- Search Section -->
+        <section class="search-section">
+            <div class="search-container">
+                <div class="search-input-container">
+                    <input 
+                        type="text" 
+                        id="search-input" 
+                        placeholder="Search for candidates... (e.g., 'Python developer', 'Google engineer', 'machine learning')"
+                        autocomplete="off"
+                    >
+                    <button id="search-btn" class="search-btn">
+                        <span class="search-icon">🔍</span>
+                        <span class="search-text">Search</span>
+                    </button>
+                </div>
+                
+                <div class="search-modes">
+                    <button class="mode-btn active" data-mode="semantic">
+                        🧠 Semantic
+                    </button>
+                    <button class="mode-btn" data-mode="hybrid">
+                        ⚡ Hybrid
+                    </button>
+                    <button class="mode-btn" data-mode="bm25">
+                        🔤 Keyword
+                    </button>
+                </div>
+                
+                <div class="search-options">
+                    <label for="result-limit">Results:</label>
+                    <select id="result-limit">
+                        <option value="5">5</option>
+                        <option value="10" selected>10</option>
+                        <option value="15">15</option>
+                        <option value="20">20</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="results-section">
+            <div class="results-header" id="results-header" style="display: none;">
+                <h2 id="results-title">Search Results</h2>
+                <div class="results-info" id="results-info"></div>
+            </div>
+            
+            <div class="loading-spinner" id="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Searching candidates...</p>
+            </div>
+            
+            <div class="results-container" id="results-container">
+                <div class="welcome-message">
+                    <h3>🚀 Welcome to Resume Query</h3>
+                    <p>Search through candidates using advanced AI-powered search:</p>
+                    <ul>
+                        <li><strong>🧠 Semantic:</strong> Find candidates by meaning and context</li>
+                        <li><strong>⚡ Hybrid:</strong> Combine semantic understanding with keyword matching</li>
+                        <li><strong>🔤 Keyword:</strong> Traditional keyword-based search</li>
+                    </ul>
+                    <p>Try searching for: "Python developer", "startup experience", "machine learning engineer"</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Candidate Detail Modal -->
+        <div class="modal" id="candidate-modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close-btn" id="close-modal">&times;</span>
+                <div class="modal-header">
+                    <h2 id="modal-candidate-name">Candidate Name</h2>
+                    <p id="modal-candidate-email">email@example.com</p>
+                </div>
+                <div class="modal-body" id="modal-body">
+                    <!-- Candidate details will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

@@ -29,6 +29,10 @@ EMBEDDING_MODEL = "voyage-2"
 # File paths
 DEFAULT_RESUME_FILE = "10000_candidates_with_parsed_resumes.json"
 
+# Lever API configuration
+LEVER_API_BASE_URL = "https://api.lever.co/v1"
+LEVER_API_KEY = os.getenv("LEVER_API_KEY")
+
 
 def get_db_name_from_file(resume_file: str) -> str:
     """
