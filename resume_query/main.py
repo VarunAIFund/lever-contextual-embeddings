@@ -6,7 +6,7 @@ Entry point for the resume query system.
 
 from resume_query.database import ResumeVectorDB
 from resume_query.interactive import interactive_resume_query_loop
-from resume_query.config import DEFAULT_RESUME_FILE, DEFAULT_DB_NAME
+from resume_query.config import DEFAULT_RESUME_FILE, get_db_name_from_file
 
 
 def main():
@@ -15,9 +15,13 @@ def main():
         print("🚀 Initializing Resume Search System...")
         print("=" * 50)
         
+        # Generate database name based on resume file
+        db_name = get_db_name_from_file(DEFAULT_RESUME_FILE)
+        print(f"📁 Using database: {db_name}")
+        
         # Initialize ResumeVectorDB
         print("🗄️ Initializing Resume Database...")
-        resume_db = ResumeVectorDB(DEFAULT_DB_NAME)
+        resume_db = ResumeVectorDB(db_name)
         
         # Load and process resume data
         print("⚡ Loading and processing resume data...")

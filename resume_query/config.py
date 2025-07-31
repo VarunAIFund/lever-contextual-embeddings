@@ -27,4 +27,21 @@ DEFAULT_BATCH_SIZE = 128
 EMBEDDING_MODEL = "voyage-2"
 
 # File paths
-DEFAULT_RESUME_FILE = "candidates_with_parsed_resumes.json"
+DEFAULT_RESUME_FILE = "10000_candidates_with_parsed_resumes.json"
+
+
+def get_db_name_from_file(resume_file: str) -> str:
+    """
+    Generate a unique database name based on the resume file name.
+    
+    Args:
+        resume_file: Path to the resume JSON file
+        
+    Returns:
+        Database name string
+    """
+    # Extract filename without extension
+    filename = os.path.splitext(os.path.basename(resume_file))[0]
+    # Clean filename for use as database name (remove special chars, replace with underscore)
+    clean_name = "".join(c if c.isalnum() else "_" for c in filename)
+    return f"resume_db_{clean_name}"
