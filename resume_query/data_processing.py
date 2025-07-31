@@ -56,13 +56,9 @@ def process_resume_data(resume_data: List[Dict[str, Any]]) -> List[Dict[str, Any
         headline = candidate.get('headline', '')
         stage = candidate.get('stage', '')
         
-        # Create candidate summary chunk
+        # Create candidate summary chunk (focus on professionally relevant content)
         candidate_summary = f"""
-        Name: {name}
-        Email: {email}
         Location: {location}
-        Stage: {stage}
-        Professional Summary: {headline}
         """.strip()
         
         chunks.append({
@@ -95,7 +91,6 @@ def process_resume_data(resume_data: List[Dict[str, Any]]) -> List[Dict[str, Any
             end_date = format_date(end) if end else "Present"
             
             position_text = f"""
-            Candidate: {name}
             Company: {org}
             Title: {title}
             Duration: {start_date} - {end_date}
@@ -136,14 +131,9 @@ def get_content_from_metadata(metadata: Dict[str, Any]) -> str:
         Reconstructed content string
     """
     if metadata['chunk_type'] == 'candidate_summary':
-        return f"""Name: {metadata['name']}
-Email: {metadata['email']}
-Location: {metadata['location']}
-Stage: {metadata['stage']}
-Professional Summary: {metadata['headline']}"""
+        return f"""Location: {metadata['location']}"""
     else:  # position
-        return f"""Candidate: {metadata['name']}
-Company: {metadata['company']}
+        return f"""Company: {metadata['company']}
 Title: {metadata['title']}
 Duration: {metadata['start_date']} - {metadata['end_date']}
 Location: {metadata['location']}

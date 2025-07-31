@@ -247,16 +247,15 @@ class VoyageReranker:
     def _reconstruct_content(self, metadata: Dict[str, Any]) -> str:
         """Reconstruct content from metadata if content field is missing."""
         if metadata.get('chunk_type') == 'candidate_summary':
-            return f"""Name: {metadata.get('name', '')}
-Location: {metadata.get('location', '')}
-Stage: {metadata.get('stage', '')}
-Professional Summary: {metadata.get('headline', '')}"""
+            return f"""Location: {metadata.get('location', '')}"""
         else:  # position
-            return f"""Candidate: {metadata.get('name', '')}
-Company: {metadata.get('company', '')}
+            return f"""Company: {metadata.get('company', '')}
 Title: {metadata.get('title', '')}
 Duration: {metadata.get('start_date', '')} - {metadata.get('end_date', '')}
-Experience Details: {metadata.get('summary', '')}"""
+Location: {metadata.get('location', '')}
+
+Experience Details:
+{metadata.get('summary', '')}"""
     
     def clear_cache(self):
         """Clear the reranking cache."""
