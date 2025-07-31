@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Candidate Database Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .search-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.1rem;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .search-box:focus {
+            border-color: #667eea;
+        }
+
+        .search-stats {
+            margin-top: 1rem;
+            text-align: center;
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .candidates-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .candidate-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .candidate-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            border-color: #667eea;
+        }
+
+        .candidate-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .candidate-email {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .candidate-location {
+            color: #666;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .candidate-stage {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            background: #e8f4f8;
+            color: #2c3e50;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+
+        .candidate-headline {
+            color: #555;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 2% auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 12px 12px 0 0;
+            position: relative;
+        }
+
+        .close {
+            position: absolute;
+            right: 1rem;
+            top: 1rem;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            background: rgba(255,255,255,0.2);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+
+        .close:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        .profile-section {
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .profile-header {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .profile-info h2 {
+            font-size: 2rem;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .profile-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #666;
+            min-width: 80px;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 1rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e9ecef;
+        }
+
+        .timeline-item {
+            position: relative;
+            background: white;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -2.7rem;
+            top: 1.5rem;
+            width: 12px;
+            height: 12px;
+            background: #667eea;
+            border-radius: 50%;
+            border: 3px solid white;
+        }
+
+        .timeline-item[style*="border-left-color: #28a745"]::before {
+            background: #28a745;
+        }
+
+        .position-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .position-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .position-company {
+            font-size: 1.1rem;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .position-duration {
+            font-size: 0.9rem;
+            color: #666;
+            text-align: right;
+        }
+
+        .position-summary {
+            color: #555;
+            line-height: 1.6;
+            white-space: pre-line;
+        }
+
+        .raw-data {
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-top: 2rem;
+        }
+
+        .raw-data-toggle {
+            width: 100%;
+            padding: 1rem;
+            background: #e9ecef;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+        }
+
+        .raw-data-content {
+            display: none;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .raw-data-content pre {
+            background: white;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            line-height: 1.4;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        /* File Upload Styles */
+        .upload-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+
+        .upload-text {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-subtext {
+            color: #666;
+            margin-bottom: 2rem;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .upload-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .loading-spinner {
+            display: none;
+            margin: 2rem auto;
+            text-align: center;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .file-info {
+            display: none;
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem auto;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        .file-info .success-icon {
+            color: #4caf50;
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
+        }
+
+        .change-file-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-left: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .error-message {
+            display: none;
+            background: #fee;
+            border: 1px solid #f56565;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem auto;
+            max-width: 800px;
+            text-align: center;
+            color: #c53030;
+        }
+
+        @media (max-width: 768px) {
+            .candidates-container {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+            }
+            
+            .modal-content {
+                width: 95%;
+                margin: 5% auto;
+            }
+            
+            .profile-header {
+                grid-template-columns: 1fr;
+            }
+            
+            .position-header {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Candidate Database</h1>
+        <p>Search and explore candidate profiles</p>
+    </div>
+
+    <!-- File Upload Section -->
+    <div id="uploadSection" class="upload-container">
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">Upload Candidates JSON File</div>
+            <div class="upload-subtext">Drag and drop your candidates_with_parsed_resumes.json file here, or click to browse</div>
+            <button class="upload-button" onclick="document.getElementById('fileInput').click()">
+                Choose File
+            </button>
+            <input type="file" id="fileInput" class="file-input" accept=".json" />
+        </div>
+        
+        <div id="loadingSpinner" class="loading-spinner">
+            <div class="spinner"></div>
+            <div>Processing candidates...</div>
+        </div>
+        
+        <div id="fileInfo" class="file-info">
+            <span class="success-icon">✅</span>
+            <span id="fileInfoText">File loaded successfully!</span>
+            <button class="change-file-btn" onclick="changeFile()">Change File</button>
+        </div>
+        
+        <div id="errorMessage" class="error-message">
+            <strong>Error:</strong> <span id="errorText"></span>
+            <br><br>
+            <button class="upload-button" onclick="resetUpload()">Try Again</button>
+        </div>
+    </div>
+
+    <!-- Search Section (initially hidden) -->
+    <div id="searchSection" class="search-container" style="display: none;">
+        <input type="text" id="searchBox" class="search-box" placeholder="Search candidates by name...">
+        <div id="searchStats" class="search-stats"></div>
+    </div>
+
+    <!-- Candidates Container (initially hidden) -->
+    <div id="candidatesContainer" class="candidates-container" style="display: none;">
+        <div class="no-results">No candidates loaded yet.</div>
+    </div>
+
+    <!-- Modal -->
+    <div id="candidateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close">&times;</span>
+                <div id="modalHeader"></div>
+            </div>
+            <div class="modal-body" id="modalBody">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let candidates = [];
+        let filteredCandidates = [];
+
+        // File upload handling
+        function initializeFileUpload() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadArea = document.getElementById('uploadArea');
+
+            // Handle file selection
+            fileInput.addEventListener('change', handleFileSelect);
+
+            // Handle drag and drop
+            uploadArea.addEventListener('dragover', handleDragOver);
+            uploadArea.addEventListener('dragleave', handleDragLeave);
+            uploadArea.addEventListener('drop', handleFileDrop);
+            uploadArea.addEventListener('click', () => fileInput.click());
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                processFile(file);
+            }
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            document.getElementById('uploadArea').classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            event.preventDefault();
+            document.getElementById('uploadArea').classList.remove('dragover');
+        }
+
+        function handleFileDrop(event) {
+            event.preventDefault();
+            document.getElementById('uploadArea').classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                processFile(files[0]);
+            }
+        }
+
+        function processFile(file) {
+            // Validate file type
+            if (!file.name.toLowerCase().endsWith('.json')) {
+                showError('Please select a JSON file.');
+                return;
+            }
+
+            // Show loading
+            showLoading();
+
+            // Read file
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const jsonData = JSON.parse(e.target.result);
+                    
+                    // Validate data structure
+                    if (!Array.isArray(jsonData)) {
+                        throw new Error('JSON file must contain an array of candidates.');
+                    }
+
+                    // Load candidates
+                    candidates = jsonData;
+                    filteredCandidates = candidates;
+                    
+                    // Show success and hide upload section
+                    showSuccess(file.name, candidates.length);
+                    showCandidates();
+
+                } catch (error) {
+                    console.error('Error parsing JSON:', error);
+                    showError('Invalid JSON file. Please check the file format.');
+                }
+            };
+
+            reader.onerror = function() {
+                showError('Error reading file. Please try again.');
+            };
+
+            reader.readAsText(file);
+        }
+
+        function showLoading() {
+            document.getElementById('uploadArea').style.display = 'none';
+            document.getElementById('loadingSpinner').style.display = 'block';
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        function showSuccess(fileName, candidateCount) {
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('fileInfo').style.display = 'block';
+            document.getElementById('fileInfoText').textContent = 
+                `${fileName} loaded successfully! Found ${candidateCount} candidates.`;
+        }
+
+        function showError(message) {
+            document.getElementById('uploadArea').style.display = 'block';
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'block';
+            document.getElementById('errorText').textContent = message;
+        }
+
+        function showCandidates() {
+            document.getElementById('searchSection').style.display = 'block';
+            document.getElementById('candidatesContainer').style.display = 'grid';
+            displayCandidates();
+            updateSearchStats();
+        }
+
+        function changeFile() {
+            resetUpload();
+        }
+
+        function resetUpload() {
+            document.getElementById('uploadArea').style.display = 'block';
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('searchSection').style.display = 'none';
+            document.getElementById('candidatesContainer').style.display = 'none';
+            document.getElementById('fileInput').value = '';
+            candidates = [];
+            filteredCandidates = [];
+        }
+
+        // Display candidates
+        function displayCandidates() {
+            const container = document.getElementById('candidatesContainer');
+            
+            if (filteredCandidates.length === 0) {
+                container.innerHTML = '<div class="no-results">No candidates found matching your search.</div>';
+                return;
+            }
+
+            container.innerHTML = filteredCandidates.map(candidate => `
+                <div class="candidate-card" onclick="openModal('${candidate.candidate_id}')">
+                    <div class="candidate-name">${candidate.name || 'Unknown'}</div>
+                    <div class="candidate-email">📧 ${candidate.email || 'No email'}</div>
+                    <div class="candidate-location">📍 ${candidate.location || 'Location not specified'}</div>
+                    <div class="candidate-stage">${formatStage(candidate.stage)}</div>
+                    <div class="candidate-headline">${candidate.headline || 'No professional summary available'}</div>
+                </div>
+            `).join('');
+        }
+
+        // Search functionality
+        function searchCandidates() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            filteredCandidates = candidates.filter(candidate => 
+                (candidate.name || '').toLowerCase().includes(searchTerm)
+            );
+            displayCandidates();
+            updateSearchStats();
+        }
+
+        // Update search statistics
+        function updateSearchStats() {
+            const stats = document.getElementById('searchStats');
+            const searchBox = document.getElementById('searchBox');
+            
+            if (searchBox.value.trim()) {
+                stats.textContent = `Showing ${filteredCandidates.length} of ${candidates.length} candidates`;
+            } else {
+                stats.textContent = `${candidates.length} total candidates`;
+            }
+        }
+
+        // Format stage
+        function formatStage(stage) {
+            if (!stage) return 'Unknown Stage';
+            return stage.split('-').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+        }
+
+        // Format date
+        function formatDate(dateObj) {
+            if (!dateObj || !dateObj.year) return '';
+            
+            if (dateObj.month) {
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                return `${months[dateObj.month - 1]} ${dateObj.year}`;
+            }
+            return dateObj.year.toString();
+        }
+
+        // Calculate duration
+        function calculateDuration(start, end) {
+            if (!start || !start.year) return '';
+            
+            const startDate = new Date(start.year, (start.month || 1) - 1);
+            const endDate = end && end.year ? new Date(end.year, (end.month || 12) - 1) : new Date();
+            
+            const months = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                          (endDate.getMonth() - startDate.getMonth());
+            
+            if (months < 12) {
+                return `${months} month${months !== 1 ? 's' : ''}`;
+            } else {
+                const years = Math.floor(months / 12);
+                const remainingMonths = months % 12;
+                let duration = `${years} year${years !== 1 ? 's' : ''}`;
+                if (remainingMonths > 0) {
+                    duration += ` ${remainingMonths} month${remainingMonths !== 1 ? 's' : ''}`;
+                }
+                return duration;
+            }
+        }
+
+        // Open modal with candidate details
+        function openModal(candidateId) {
+            const candidate = candidates.find(c => c.candidate_id === candidateId);
+            if (!candidate) return;
+
+            const modal = document.getElementById('candidateModal');
+            const modalHeader = document.getElementById('modalHeader');
+            const modalBody = document.getElementById('modalBody');
+
+            // Header
+            modalHeader.innerHTML = `
+                <h2>${candidate.name || 'Unknown Candidate'}</h2>
+                <p>${candidate.headline || 'No professional summary available'}</p>
+            `;
+
+            // Body
+            modalBody.innerHTML = `
+                <div class="profile-section">
+                    <div class="section-title">Contact Information</div>
+                    <div class="profile-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Email:</span>
+                            <span>${candidate.email || 'Not provided'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Location:</span>
+                            <span>${candidate.location || 'Not specified'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Stage:</span>
+                            <span>${formatStage(candidate.stage)}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Origin:</span>
+                            <span>${candidate.origin || 'Unknown'}</span>
+                        </div>
+                    </div>
+                </div>
+
+                ${candidate.parsed_resume && candidate.parsed_resume.positions ? `
+                <div class="profile-section">
+                    <div class="section-title">Work Experience</div>
+                    <div class="timeline">
+                        ${candidate.parsed_resume.positions.map(position => `
+                            <div class="timeline-item">
+                                <div class="position-header">
+                                    <div>
+                                        <div class="position-title">${position.title || 'Unknown Title'}</div>
+                                        <div class="position-company">${position.org || 'Unknown Company'}</div>
+                                        ${position.location ? `<div style="color: #666; font-size: 0.9rem; margin-top: 0.25rem;">📍 ${position.location}</div>` : ''}
+                                    </div>
+                                    <div class="position-duration">
+                                        <div>${formatDate(position.start)} - ${position.end ? formatDate(position.end) : 'Present'}</div>
+                                        <div style="font-size: 0.8rem; margin-top: 0.25rem;">${calculateDuration(position.start, position.end)}</div>
+                                    </div>
+                                </div>
+                                ${position.summary ? `<div class="position-summary">${position.summary}</div>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+
+                ${candidate.parsed_resume && candidate.parsed_resume.schools ? `
+                <div class="profile-section">
+                    <div class="section-title">Education</div>
+                    <div class="timeline">
+                        ${candidate.parsed_resume.schools.map(school => `
+                            <div class="timeline-item" style="border-left-color: #28a745;">
+                                <div class="position-header">
+                                    <div>
+                                        <div class="position-title">${school.degree || 'Degree'}</div>
+                                        ${school.field ? `<div style="color: #666; font-size: 1rem; margin-top: 0.25rem;">📚 ${school.field}</div>` : ''}
+                                        <div class="position-company">${school.org || 'Unknown Institution'}</div>
+                                    </div>
+                                    <div class="position-duration">
+                                        <div>${formatDate(school.start)} - ${school.end ? formatDate(school.end) : 'Present'}</div>
+                                        ${school.start && school.end ? `<div style="font-size: 0.8rem; margin-top: 0.25rem;">${calculateDuration(school.start, school.end)}</div>` : ''}
+                                    </div>
+                                </div>
+                                ${school.summary ? `<div class="position-summary">${school.summary}</div>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+
+                <div class="raw-data">
+                    <button class="raw-data-toggle" onclick="toggleRawData()">
+                        <span>View Raw Data</span>
+                        <span id="rawDataArrow">▼</span>
+                    </button>
+                    <div class="raw-data-content" id="rawDataContent">
+                        <pre>${JSON.stringify(candidate, null, 2)}</pre>
+                    </div>
+                </div>
+            `;
+
+            modal.style.display = 'block';
+        }
+
+        // Toggle raw data
+        function toggleRawData() {
+            const content = document.getElementById('rawDataContent');
+            const arrow = document.getElementById('rawDataArrow');
+            
+            if (content.style.display === 'none' || !content.style.display) {
+                content.style.display = 'block';
+                arrow.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                arrow.textContent = '▼';
+            }
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('candidateModal').style.display = 'none';
+        }
+
+        // Event listeners
+        document.getElementById('searchBox').addEventListener('input', searchCandidates);
+        document.querySelector('.close').addEventListener('click', closeModal);
+        
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('candidateModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+
+        // Initialize file upload on page load
+        initializeFileUpload();
+    </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../contextual-embeddings/contextual-rag-lambda-function"
+		}
+	],
+	"settings": {}
+}
