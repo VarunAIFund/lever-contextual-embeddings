@@ -47,9 +47,11 @@ def view_chunks(resume_file: str, max_candidates: int = 3, max_chunks_per_candid
         # Count chunk types
         candidate_summaries = sum(1 for c in chunks if c['metadata']['chunk_type'] == 'candidate_summary')
         position_chunks = sum(1 for c in chunks if c['metadata']['chunk_type'] == 'position')
+        education_chunks = sum(1 for c in chunks if c['metadata']['chunk_type'] == 'education')
         
         print(f"   Candidate summary chunks: {candidate_summaries}")
         print(f"   Position chunks: {position_chunks}")
+        print(f"   Education chunks: {education_chunks}")
         print(f"   Average chunks per candidate: {len(chunks) / len(candidates_to_process):.1f}")
         print()
         
@@ -78,7 +80,12 @@ def view_chunks(resume_file: str, max_candidates: int = 3, max_chunks_per_candid
             
             # Display chunk
             chunk_type = metadata['chunk_type']
-            chunk_icon = "📋" if chunk_type == 'candidate_summary' else "💼"
+            if chunk_type == 'candidate_summary':
+                chunk_icon = "📋"
+            elif chunk_type == 'education':
+                chunk_icon = "🎓"
+            else:  # position
+                chunk_icon = "💼"
             
             print(f"\n{chunk_icon} CHUNK {i+1}: {chunk_type.upper()}")
             print("-" * 40)
@@ -100,6 +107,11 @@ def view_chunks(resume_file: str, max_candidates: int = 3, max_chunks_per_candid
                 print(f"   Email: {metadata.get('email', 'No email')}")
                 print(f"   Location: {metadata.get('location', 'No location')}")
                 print(f"   Stage: {metadata.get('stage', 'No stage')}")
+            elif chunk_type == 'education':
+                print(f"   Candidate: {metadata.get('name', 'Unknown')}")
+                print(f"   School: {metadata.get('school_name', 'Unknown')}")
+                print(f"   Degree: {metadata.get('degree', 'Unknown')}")
+                print(f"   Education Index: {metadata.get('education_index', 'N/A')}")
             else:  # position
                 print(f"   Candidate: {metadata.get('name', 'Unknown')}")
                 print(f"   Company: {metadata.get('company', 'Unknown')}")

@@ -29,6 +29,9 @@ EMBEDDING_MODEL = "voyage-2"
 # Voyage AI configuration
 VOYAGE_API_KEY = os.getenv("VOYAGE_API_KEY")
 
+# Cohere configuration
+COHERE_API_KEY = os.getenv("COHERE_API_KEY")
+
 # File paths
 DEFAULT_RESUME_FILE = "10000_candidates_with_parsed_resumes.json"
 
@@ -36,8 +39,8 @@ DEFAULT_RESUME_FILE = "10000_candidates_with_parsed_resumes.json"
 LEVER_API_BASE_URL = "https://api.lever.co/v1"
 LEVER_API_KEY = os.getenv("LEVER_API_KEY")
 
-# Reranking configuration
-RERANK_MODEL = "rerank-lite-1"  # Options: "rerank-lite-1", "rerank-1"
+# Reranking configuration (Cohere)
+RERANK_MODEL = "rerank-v3.5"  # Options: "rerank-v3.5", "rerank-english-v3.0", "rerank-multilingual-v3.0", "rerank-english-v2.0"
 RERANK_TOP_N = 50  # Number of top results to rerank (for efficiency)
 ENABLE_RERANKING = True  # Whether to enable reranking by default
 RERANK_CACHE_ENABLED = True  # Whether to cache rerank results

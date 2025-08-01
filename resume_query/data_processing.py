@@ -93,8 +93,6 @@ def process_resume_data(resume_data: List[Dict[str, Any]]) -> List[Dict[str, Any
             position_text = f"""
             Company: {org}
             Title: {title}
-            Duration: {start_date} - {end_date}
-            Location: {location_pos}
             
             Experience Details:
             {summary}
@@ -116,6 +114,31 @@ def process_resume_data(resume_data: List[Dict[str, Any]]) -> List[Dict[str, Any
                     'summary': summary
                 }
             })
+        
+        # Process individual schools/education
+        schools = parsed_resume.get('schools', [])
+        
+        for i, school in enumerate(schools):
+            org = school.get('org', '')
+            degree = school.get('degree', '')
+            
+            education_text = f"""
+            School: {org}
+            Degree: {degree}
+            """.strip()
+            
+            chunks.append({
+                'content': education_text,
+                'metadata': {
+                    'chunk_type': 'education',
+                    'candidate_id': candidate_id,
+                    'name': name,
+                    'email': email,
+                    'education_index': i,
+                    'school_name': org,
+                    'degree': degree
+                }
+            })
     
     return chunks
 
@@ -132,6 +155,9 @@ def get_content_from_metadata(metadata: Dict[str, Any]) -> str:
     """
     if metadata['chunk_type'] == 'candidate_summary':
         return f"""Location: {metadata['location']}"""
+    elif metadata['chunk_type'] == 'education':
+        return f"""School: {metadata['school_name']}
+Degree: {metadata['degree']}"""
     else:  # position
         return f"""Company: {metadata['company']}
 Title: {metadata['title']}

@@ -1,112 +1,247 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resume Query System</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SuperLever</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <body>
     <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <h1>🔍 Resume Query System</h1>
-            <div class="status-indicator" id="status">
-                <span class="status-dot" id="status-dot"></span>
-                <span id="status-text">Initializing...</span>
-            </div>
-        </header>
-
-        <!-- Search Section -->
-        <section class="search-section">
-            <div class="search-container">
-                <div class="search-input-container">
-                    <input 
-                        type="text" 
-                        id="search-input" 
-                        placeholder="Search for candidates... (e.g., 'Python developer', 'Google engineer', 'machine learning')"
-                        autocomplete="off"
-                    >
-                    <button id="search-btn" class="search-btn">
-                        <span class="search-icon">🔍</span>
-                        <span class="search-text">Search</span>
-                    </button>
-                </div>
-                
-                <div class="search-modes">
-                    <button class="mode-btn active" data-mode="semantic">
-                        🧠 Semantic
-                    </button>
-                    <button class="mode-btn" data-mode="hybrid">
-                        ⚡ Hybrid
-                    </button>
-                    <button class="mode-btn" data-mode="bm25">
-                        🔤 Keyword
-                    </button>
-                </div>
-                
-                <div class="search-options">
-                    <label for="result-limit">Results:</label>
-                    <select id="result-limit">
-                        <option value="5">5</option>
-                        <option value="10" selected>10</option>
-                        <option value="15">15</option>
-                        <option value="20">20</option>
-                    </select>
-                    
-                    <div class="rerank-toggle">
-                        <input type="checkbox" id="enable-rerank" />
-                        <label for="enable-rerank">🎯 Rerank results</label>
-                        <select id="rerank-model" class="rerank-model-selector">
-                            <option value="rerank-lite-1">⚡ Lite (Fast)</option>
-                            <option value="rerank-1">🎯 Quality (Slower)</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Results Section -->
-        <section class="results-section">
-            <div class="results-header" id="results-header" style="display: none;">
-                <h2 id="results-title">Search Results</h2>
-                <div class="results-info" id="results-info"></div>
-            </div>
-            
-            <div class="loading-spinner" id="loading" style="display: none;">
-                <div class="spinner"></div>
-                <p>Searching candidates...</p>
-            </div>
-            
-            <div class="results-container" id="results-container">
-                <div class="welcome-message">
-                    <h3>🚀 Welcome to Resume Query</h3>
-                    <p>Search through candidates using advanced AI-powered search:</p>
-                    <ul>
-                        <li><strong>🧠 Semantic:</strong> Find candidates by meaning and context</li>
-                        <li><strong>⚡ Hybrid:</strong> Combine semantic understanding with keyword matching</li>
-                        <li><strong>🔤 Keyword:</strong> Traditional keyword-based search</li>
-                    </ul>
-                    <p>Try searching for: "Python developer", "startup experience", "machine learning engineer"</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Candidate Detail Modal -->
-        <div class="modal" id="candidate-modal" style="display: none;">
-            <div class="modal-content">
-                <span class="close-btn" id="close-modal">&times;</span>
-                <div class="modal-header">
-                    <h2 id="modal-candidate-name">Candidate Name</h2>
-                    <p id="modal-candidate-email">email@example.com</p>
-                </div>
-                <div class="modal-body" id="modal-body">
-                    <!-- Candidate details will be loaded here -->
-                </div>
-            </div>
+      <!-- Header -->
+      <header class="header">
+        <h1>🔍 SuperLever</h1>
+        <div class="status-indicator" id="status">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">Initializing...</span>
         </div>
+      </header>
+
+      <!-- Search Section -->
+      <section class="search-section">
+        <div class="search-container">
+          <div class="search-input-container">
+            <input
+              type="text"
+              id="search-input"
+              placeholder="Search for candidates... (e.g., 'Python developer', 'Google engineer', 'machine learning')"
+              autocomplete="off"
+            />
+            <button id="search-btn" class="search-btn">
+              <span class="search-icon">🔍</span>
+              <span class="search-text">Search</span>
+            </button>
+          </div>
+
+          <div class="search-modes">
+            <button class="mode-btn active" data-mode="semantic">
+              🧠 Semantic
+            </button>
+            <button class="mode-btn" data-mode="hybrid">⚡ Hybrid</button>
+            <button class="mode-btn" data-mode="bm25">🔤 Keyword</button>
+            <button class="mode-btn" data-mode="weighted">⚖️ Weighted</button>
+          </div>
+
+          <div class="search-options">
+            <label for="database-select">Database:</label>
+            <select id="database-select">
+              <option value="">Loading...</option>
+            </select>
+
+            <label for="result-limit">Results:</label>
+            <select id="result-limit">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="15">15</option>
+              <option value="20">20</option>
+            </select>
+
+            <div class="rerank-toggle">
+              <input type="checkbox" id="enable-rerank" />
+              <label for="enable-rerank">🎯 Rerank results</label>
+              <select id="rerank-model" class="rerank-model-selector">
+                <option value="rerank-v3.5" selected>
+                  🚀 Rerank 3.5 (Latest)
+                </option>
+                <option value="rerank-english-v3.0">🎯 English v3.0</option>
+                <option value="rerank-multilingual-v3.0">
+                  🌍 Multilingual v3.0
+                </option>
+                <option value="rerank-english-v2.0">
+                  📝 English v2.0 (Legacy)
+                </option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Weighted Search Section -->
+        <div
+          class="weighted-search-container"
+          id="weighted-search-container"
+          style="display: none"
+        >
+          <h3>⚖️ Multi-Criteria Search</h3>
+
+          <div class="criteria-grid">
+            <div class="criteria-item">
+              <label for="skills-input">Skills & Technologies</label>
+              <input
+                type="text"
+                id="skills-input"
+                placeholder="e.g., Python, React, Machine Learning"
+              />
+              <div class="weight-control">
+                <label for="skills-weight">Weight:</label>
+                <input
+                  type="range"
+                  id="skills-weight"
+                  min="0"
+                  max="100"
+                  value="40"
+                />
+                <span id="skills-weight-value">40%</span>
+              </div>
+            </div>
+
+            <div class="criteria-item">
+              <label for="experience-input">Experience Level</label>
+              <input
+                type="text"
+                id="experience-input"
+                placeholder="e.g., Senior, Lead, 5+ years"
+              />
+              <div class="weight-control">
+                <label for="experience-weight">Weight:</label>
+                <input
+                  type="range"
+                  id="experience-weight"
+                  min="0"
+                  max="100"
+                  value="30"
+                />
+                <span id="experience-weight-value">30%</span>
+              </div>
+            </div>
+
+            <div class="criteria-item">
+              <label for="company-input">Company Background</label>
+              <input
+                type="text"
+                id="company-input"
+                placeholder="e.g., startup, Google, fintech"
+              />
+              <div class="weight-control">
+                <label for="company-weight">Weight:</label>
+                <input
+                  type="range"
+                  id="company-weight"
+                  min="0"
+                  max="100"
+                  value="20"
+                />
+                <span id="company-weight-value">20%</span>
+              </div>
+            </div>
+
+            <div class="criteria-item">
+              <label for="education-input">Education</label>
+              <input
+                type="text"
+                id="education-input"
+                placeholder="e.g., Computer Science, MIT, PhD"
+              />
+              <div class="weight-control">
+                <label for="education-weight">Weight:</label>
+                <input
+                  type="range"
+                  id="education-weight"
+                  min="0"
+                  max="100"
+                  value="10"
+                />
+                <span id="education-weight-value">10%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="threshold-control">
+            <label for="threshold-slider">Minimum Match Threshold:</label>
+            <input
+              type="range"
+              id="threshold-slider"
+              min="0"
+              max="100"
+              value="70"
+              step="5"
+            />
+            <span id="threshold-value">70%</span>
+            <p class="threshold-help">
+              Only show candidates scoring above this threshold
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Results Section -->
+      <section class="results-section">
+        <div class="results-header" id="results-header" style="display: none">
+          <h2 id="results-title">Search Results</h2>
+          <div class="results-info" id="results-info"></div>
+        </div>
+
+        <div class="loading-spinner" id="loading" style="display: none">
+          <div class="spinner"></div>
+          <p>Searching candidates...</p>
+        </div>
+
+        <div class="results-container" id="results-container">
+          <div class="welcome-message">
+            <h3>🚀 Welcome to Resume Query</h3>
+            <p>Search through candidates using advanced AI-powered search:</p>
+            <ul>
+              <li>
+                <strong>🧠 Semantic:</strong> Find candidates by meaning and
+                context
+              </li>
+              <li>
+                <strong>⚡ Hybrid:</strong> Combine semantic understanding with
+                keyword matching
+              </li>
+              <li>
+                <strong>🔤 Keyword:</strong> Traditional keyword-based search
+              </li>
+              <li>
+                <strong>⚖️ Weighted:</strong> Multi-criteria search with
+                customizable importance weights
+              </li>
+            </ul>
+            <p>
+              Try searching for: "Python developer", "startup experience",
+              "machine learning engineer"
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Candidate Detail Modal -->
+      <div class="modal" id="candidate-modal" style="display: none">
+        <div class="modal-content">
+          <span class="close-btn" id="close-modal">&times;</span>
+          <div class="modal-header">
+            <h2 id="modal-candidate-name">Candidate Name</h2>
+            <p id="modal-candidate-email">email@example.com</p>
+          </div>
+          <div class="modal-body" id="modal-body">
+            <!-- Candidate details will be loaded here -->
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
-</body>
+  </body>
 </html>

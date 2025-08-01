@@ -1,55 +1,63 @@
 """
 Reranking Module
 
-Provides reranking capabilities using Voyage AI to improve search result quality
+Provides reranking capabilities using Cohere to improve search result quality
 by reordering candidates based on deeper query-candidate relevance analysis.
 """
 
 import os
 import logging
 from typing import List, Dict, Any, Optional, Tuple
-import voyageai
-from resume_query.config import VOYAGE_API_KEY
+import cohere
+from resume_query.config import COHERE_API_KEY
 
 logger = logging.getLogger(__name__)
 
 
-class VoyageReranker:
-    """Voyage AI-powered reranker for resume search results."""
+class CohereReranker:
+    """Cohere-powered reranker for resume search results."""
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "rerank-lite-1"):
+    def __init__(self, api_key: Optional[str] = None, model: str = "rerank-v3.5"):
         """
-        Initialize the Voyage AI reranker.
+        Initialize the Cohere reranker.
         
         Args:
-            api_key: Voyage AI API key (uses VOYAGE_API_KEY env var if None)
-            model: Rerank model to use ('rerank-lite-1' or 'rerank-1')
+            api_key: Cohere API key (uses COHERE_API_KEY env var if None)
+            model: Rerank model to use ('rerank-v3.5', 'rerank-english-v3.0', 'rerank-multilingual-v3.0')
         """
         if api_key is None:
-            api_key = VOYAGE_API_KEY
+            api_key = COHERE_API_KEY
             
         if not api_key:
-            raise ValueError("Voyage API key is required. Set VOYAGE_API_KEY environment variable.")
+            raise ValueError("Cohere API key is required. Set COHERE_API_KEY environment variable.")
         
-        self.client = voyageai.Client(api_key=api_key)
+        self.client = cohere.Client(api_key=api_key)
         self.model = model
         self.cache = {}  # Simple query cache
         
         # Model configurations
         self.model_configs = {
-            "rerank-lite-1": {
-                "max_documents": 100,
-                "description": "Fast, lightweight reranking"
+            "rerank-v3.5": {
+                "max_documents": 1000,
+                "description": "Latest multilingual reranking with enhanced reasoning (recommended)"
             },
-            "rerank-1": {
-                "max_documents": 100,
-                "description": "High-quality reranking"
+            "rerank-english-v3.0": {
+                "max_documents": 1000,
+                "description": "High-quality English reranking"
+            },
+            "rerank-multilingual-v3.0": {
+                "max_documents": 1000,
+                "description": "Multilingual reranking"
+            },
+            "rerank-english-v2.0": {
+                "max_documents": 1000,
+                "description": "English reranking v2"
             }
         }
         
         if model not in self.model_configs:
-            logger.warning(f"Unknown model {model}, using rerank-lite-1")
-            self.model = "rerank-lite-1"
+            logger.warning(f"Unknown model {model}, using rerank-v3.5")
+            self.model = "rerank-v3.5"
     
     def rerank_candidates(
         self, 
@@ -99,12 +107,12 @@ class VoyageReranker:
             
             logger.info(f"Reranking {len(documents)} candidates with {self.model}")
             
-            # Call Voyage AI rerank API
+            # Call Cohere rerank API
             rerank_result = self.client.rerank(
                 query=query,
                 documents=documents,
                 model=self.model,
-                top_k=top_k or len(documents)
+                top_n=top_k or len(documents)
             )
             
             # Process results
@@ -212,7 +220,7 @@ class VoyageReranker:
                 query=query,
                 documents=documents,
                 model=self.model,
-                top_k=len(documents)
+                top_n=len(documents)
             )
             
             # Create score array in original order
@@ -248,6 +256,9 @@ class VoyageReranker:
         """Reconstruct content from metadata if content field is missing."""
         if metadata.get('chunk_type') == 'candidate_summary':
             return f"""Location: {metadata.get('location', '')}"""
+        elif metadata.get('chunk_type') == 'education':
+            return f"""School: {metadata.get('school_name', '')}
+Degree: {metadata.get('degree', '')}"""
         else:  # position
             return f"""Company: {metadata.get('company', '')}
 Title: {metadata.get('title', '')}
@@ -273,18 +284,18 @@ Experience Details:
 
 # Convenience functions for easy integration
 
-def create_reranker(model: str = "rerank-lite-1") -> VoyageReranker:
+def create_reranker(model: str = "rerank-v3.5") -> CohereReranker:
     """
-    Create a VoyageReranker instance with error handling.
+    Create a CohereReranker instance with error handling.
     
     Args:
         model: Model to use for reranking
         
     Returns:
-        VoyageReranker instance or None if creation fails
+        CohereReranker instance or None if creation fails
     """
     try:
-        return VoyageReranker(model=model)
+        return CohereReranker(model=model)
     except Exception as e:
         logger.error(f"Failed to create reranker: {e}")
         return None
@@ -293,7 +304,7 @@ def create_reranker(model: str = "rerank-lite-1") -> VoyageReranker:
 def rerank_candidates(
     query: str, 
     candidates: List[Dict[str, Any]], 
-    model: str = "rerank-lite-1",
+    model: str = "rerank-v3.5",
     top_k: Optional[int] = None
 ) -> List[Dict[str, Any]]:
     """
@@ -302,7 +313,7 @@ def rerank_candidates(
     Args:
         query: Search query
         candidates: List of candidates to rerank
-        model: Voyage AI model to use
+        model: Cohere model to use
         top_k: Number of top results to return
         
     Returns:

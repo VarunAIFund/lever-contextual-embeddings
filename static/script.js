@@ -8,6 +8,7 @@ class ResumeQueryApp {
         
         this.initializeElements();
         this.bindEvents();
+        this.loadDatabases();
         this.checkSystemHealth();
     }
     
@@ -16,10 +17,23 @@ class ResumeQueryApp {
         this.searchInput = document.getElementById('search-input');
         this.searchBtn = document.getElementById('search-btn');
         this.resultLimit = document.getElementById('result-limit');
+        this.databaseSelect = document.getElementById('database-select');
         this.modeButtons = document.querySelectorAll('.mode-btn');
         this.rerankToggle = document.getElementById('enable-rerank');
         this.rerankModelSelector = document.getElementById('rerank-model');
         this.rerankContainer = document.querySelector('.rerank-toggle');
+        
+        // Weighted search elements
+        this.weightedContainer = document.getElementById('weighted-search-container');
+        this.skillsInput = document.getElementById('skills-input');
+        this.experienceInput = document.getElementById('experience-input');
+        this.companyInput = document.getElementById('company-input');
+        this.educationInput = document.getElementById('education-input');
+        this.skillsWeight = document.getElementById('skills-weight');
+        this.experienceWeight = document.getElementById('experience-weight');
+        this.companyWeight = document.getElementById('company-weight');
+        this.educationWeight = document.getElementById('education-weight');
+        this.thresholdSlider = document.getElementById('threshold-slider');
         
         // Results elements
         this.resultsHeader = document.getElementById('results-header');
@@ -51,6 +65,12 @@ class ResumeQueryApp {
         this.modeButtons.forEach(btn => {
             btn.addEventListener('click', () => this.selectMode(btn.dataset.mode));
         });
+        
+        // Database selection events
+        this.databaseSelect.addEventListener('change', () => this.switchDatabase());
+        
+        // Weighted search events
+        this.initializeWeightedSearchEvents();
         
         // Modal events
         this.closeModal.addEventListener('click', () => this.hideModal());
@@ -92,11 +112,100 @@ class ResumeQueryApp {
         this.statusText.textContent = text;
     }
     
+    async loadDatabases() {
+        try {
+            const response = await fetch('/api/databases');
+            const data = await response.json();
+            
+            // Clear existing options
+            this.databaseSelect.innerHTML = '';
+            
+            // Add database options
+            data.databases.forEach(db => {
+                const option = document.createElement('option');
+                option.value = db.name;
+                option.textContent = `${db.name} (${Math.round(db.size / 1024 / 1024)}MB)`;
+                if (db.name === data.current) {
+                    option.selected = true;
+                }
+                this.databaseSelect.appendChild(option);
+            });
+            
+        } catch (error) {
+            console.error('Failed to load databases:', error);
+            this.databaseSelect.innerHTML = '<option value="">Error loading databases</option>';
+        }
+    }
+    
+    async switchDatabase() {
+        const selectedDb = this.databaseSelect.value;
+        if (!selectedDb) return;
+        
+        try {
+            this.updateStatus('loading', 'Switching database...');
+            
+            const response = await fetch('/api/switch-database', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    database: selectedDb
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.updateStatus('ready', `Ready • ${data.total_chunks} chunks loaded`);
+                // Clear any existing results
+                this.resultsHeader.style.display = 'none';
+                this.resultsContainer.innerHTML = '';
+                this.currentResults = [];
+            } else {
+                this.updateStatus('error', data.error || 'Failed to switch database');
+                console.error('Database switch failed:', data.error);
+            }
+            
+        } catch (error) {
+            this.updateStatus('error', 'Failed to switch database');
+            console.error('Database switch error:', error);
+        }
+    }
+    
+    initializeWeightedSearchEvents() {
+        // Weight slider events
+        this.skillsWeight.addEventListener('input', () => {
+            document.getElementById('skills-weight-value').textContent = this.skillsWeight.value + '%';
+        });
+        this.experienceWeight.addEventListener('input', () => {
+            document.getElementById('experience-weight-value').textContent = this.experienceWeight.value + '%';
+        });
+        this.companyWeight.addEventListener('input', () => {
+            document.getElementById('company-weight-value').textContent = this.companyWeight.value + '%';
+        });
+        this.educationWeight.addEventListener('input', () => {
+            document.getElementById('education-weight-value').textContent = this.educationWeight.value + '%';
+        });
+        this.thresholdSlider.addEventListener('input', () => {
+            document.getElementById('threshold-value').textContent = this.thresholdSlider.value + '%';
+        });
+    }
+    
     selectMode(mode) {
         this.currentMode = mode;
         this.modeButtons.forEach(btn => {
             btn.classList.toggle('active', btn.dataset.mode === mode);
         });
+        
+        // Show/hide weighted search UI
+        if (mode === 'weighted') {
+            this.weightedContainer.style.display = 'block';
+            this.searchInput.style.display = 'none';
+        } else {
+            this.weightedContainer.style.display = 'none';
+            this.searchInput.style.display = 'block';
+        }
     }
     
     disableMode(mode) {
@@ -118,8 +227,56 @@ class ResumeQueryApp {
     }
     
     async performSearch() {
-        const query = this.searchInput.value.trim();
-        if (!query || this.isSearching) return;
+        let searchPayload;
+        
+        if (this.currentMode === 'weighted') {
+            // Validate weighted search inputs
+            const criteria = {
+                skills: this.skillsInput.value.trim(),
+                experience: this.experienceInput.value.trim(),
+                company: this.companyInput.value.trim(),
+                education: this.educationInput.value.trim()
+            };
+            
+            // Check if at least one criterion is provided
+            if (!Object.values(criteria).some(val => val)) {
+                this.showError('Please enter at least one search criterion');
+                return;
+            }
+            
+            const weights = {
+                skills: parseFloat(this.skillsWeight.value) / 100,
+                experience: parseFloat(this.experienceWeight.value) / 100,
+                company: parseFloat(this.companyWeight.value) / 100,
+                education: parseFloat(this.educationWeight.value) / 100
+            };
+            
+            const threshold = parseFloat(this.thresholdSlider.value) / 100;
+            
+            searchPayload = {
+                mode: 'weighted',
+                criteria: criteria,
+                weights: weights,
+                threshold: threshold,
+                limit: parseInt(this.resultLimit.value),
+                rerank: this.rerankToggle.checked,
+                rerank_model: this.rerankModelSelector.value
+            };
+        } else {
+            // Regular search
+            const query = this.searchInput.value.trim();
+            if (!query) return;
+            
+            searchPayload = {
+                query: query,
+                mode: this.currentMode,
+                limit: parseInt(this.resultLimit.value),
+                rerank: this.rerankToggle.checked,
+                rerank_model: this.rerankModelSelector.value
+            };
+        }
+        
+        if (this.isSearching) return;
         
         this.isSearching = true;
         this.showLoading();
@@ -131,13 +288,7 @@ class ResumeQueryApp {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    query: query,
-                    mode: this.currentMode,
-                    limit: parseInt(this.resultLimit.value),
-                    rerank: this.rerankToggle.checked,
-                    rerank_model: this.rerankModelSelector.value
-                })
+                body: JSON.stringify(searchPayload)
             });
             
             if (!response.ok) {
@@ -178,8 +329,10 @@ class ResumeQueryApp {
             infoText += ` (${data.search_info.semantic_count} semantic, ${data.search_info.bm25_count} keyword)`;
         }
         if (data.search_info.reranked) {
-            const modelName = data.search_info.rerank_metadata?.model || 'Voyage AI';
-            const modelIcon = modelName === 'rerank-lite-1' ? '⚡' : '🎯';
+            const modelName = data.search_info.rerank_metadata?.model || 'Cohere';
+            const modelIcon = modelName === 'rerank-v3.5' ? '🚀' : 
+                             modelName.includes('multilingual') ? '🌍' : 
+                             modelName.includes('v2.0') ? '📝' : '🎯';
             infoText += ` • ${modelIcon} Reranked with ${modelName}`;
         }
         this.resultsInfo.textContent = infoText;
@@ -232,9 +385,11 @@ class ResumeQueryApp {
                     <div class="result-title">${this.escapeHtml(title)}</div>
                     <div class="result-subtitle">${this.escapeHtml(subtitle)}</div>
                     <div class="result-score">
-                        ${result.rerank_score ? 
-                            `Rerank: ${result.rerank_score.toFixed(4)} • Similarity: ${result.similarity.toFixed(4)}` :
-                            `Similarity: ${result.similarity.toFixed(4)}`
+                        ${result.weighted_score ? 
+                            `⚖️ Weighted: ${result.weighted_score.toFixed(3)} • Similarity: ${result.similarity.toFixed(4)}` :
+                            result.rerank_score ? 
+                                `Rerank: ${result.rerank_score.toFixed(4)} • Similarity: ${result.similarity.toFixed(4)}` :
+                                `Similarity: ${result.similarity.toFixed(4)}`
                         }
                     </div>
                 </div>
@@ -287,14 +442,25 @@ class ResumeQueryApp {
             `;
         }
         
-        // Links section
+        // Links section (always show for Lever profile link)
+        html += `
+            <div class="candidate-section">
+                <h3>🔗 Links & Profiles</h3>
+                <div class="links-container">
+        `;
+        
+        // Add Lever profile link first
+        const leverUrl = `https://hire.lever.co/candidates/${data.candidate_id}`;
+        html += `
+            <a href="${leverUrl}" target="_blank" rel="noopener noreferrer" class="link-item">
+                <span class="link-icon">⚖️</span>
+                <span class="link-label">Lever Profile</span>
+                <span class="link-url">hire.lever.co</span>
+            </a>
+        `;
+        
+        // Add other links if they exist
         if (data.links && data.links.length > 0) {
-            html += `
-                <div class="candidate-section">
-                    <h3>🔗 Links & Profiles</h3>
-                    <div class="links-container">
-            `;
-            
             data.links.forEach(link => {
                 const linkIcon = this.getLinkIcon(link.type);
                 const linkLabel = this.getLinkLabel(link.type);
@@ -306,12 +472,12 @@ class ResumeQueryApp {
                     </a>
                 `;
             });
-            
-            html += `
-                    </div>
-                </div>
-            `;
         }
+        
+        html += `
+                </div>
+            </div>
+        `;
         
         // Work experience
         if (data.positions && data.positions.length > 0) {
@@ -331,6 +497,27 @@ class ResumeQueryApp {
                         </div>
                         <div class="position-summary">
                             ${this.escapeHtml(position.summary || 'No description available').replace(/\\n/g, '<br>')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+        }
+        
+        // Education section
+        if (data.education && data.education.length > 0) {
+            html += `
+                <div class="candidate-section">
+                    <h3>🎓 Education (${data.total_education} entries)</h3>
+            `;
+            
+            data.education.forEach(edu => {
+                html += `
+                    <div class="position-item">
+                        <div class="position-header">
+                            <div class="position-title">${this.escapeHtml(edu.school_name || 'Unknown School')}</div>
+                            <div class="position-company">${this.escapeHtml(edu.degree || 'Unknown Degree')}</div>
                         </div>
                     </div>
                 `;
